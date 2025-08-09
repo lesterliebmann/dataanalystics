@@ -374,7 +374,7 @@ def terminate_service(proc):
 
 if __name__ == "__main__":
     
-    TOTAL_DURATION = 1 * 60 * 60
+    TOTAL_DURATION = 168 * 60 * 60
     start_time = time.time()
     
     while time.time() - start_time < TOTAL_DURATION:
